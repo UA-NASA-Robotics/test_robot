@@ -1,0 +1,81 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <xacro:include filename='inertial_macros.xacro'/>
+    <!-- SOMEDAY WE SHOULD IMPLEMENT COLORS TO THESE MACRO DEFINITIONS -JACOB -->
+
+    <!-- Define macro for wheel joint -->
+    <xacro:macro name="wheel_joint" params="position bot_center_to_wheel_center_x bot_center_to_wheel_center_y">
+        <joint name="${position}_wheel_joint" type="continuous">
+
+            <!-- Determine x_sign -->
+            <xacro:if value="${position.startswith('front')}">
+                <xacro:property name="x_sign" value="1"/>
+            </xacro:if>
+            <xacro:unless value="${position.startswith('front')}">
+                <xacro:property name="x_sign" value="-1"/>
+            </xacro:unless>
+
+            <!-- Determine y_sign -->
+            <xacro:if value="${position.endswith('left')}">
+                <xacro:property name="y_sign" value="1"/>
+            </xacro:if>
+            <xacro:unless value="${position.endswith('left')}">
+                <xacro:property name="y_sign" value="-1"/>
+            </xacro:unless>
+
+            <!-- Determine roll_sign -->
+            <xacro:if value="${position.endswith('left')}">
+                <xacro:property name="roll_sign" value="-1"/>
+            </xacro:if>
+            <xacro:unless value="${position.endswith('left')}">
+                <xacro:property name="roll_sign" value="1"/>
+            </xacro:unless>
+
+            <!-- Determine axis_sign -->
+            <xacro:if value="${position.endswith('left')}">
+                <xacro:property name="axis_sign" value="1"/>
+            </xacro:if>
+            <xacro:unless value="${position.endswith('left')}">
+                <xacro:property name="axis_sign" value="-1"/>
+            </xacro:unless>
+
+            <parent link="base_link"/>
+            <child link="${position}_wheel"/>
+            <origin xyz="${x_sign * bot_center_to_wheel_center_x} ${y_sign * bot_center_to_wheel_center_y} 0" rpy="${roll_sign * pi/2} 0 0"/>
+            <axis xyz="0 0 ${axis_sign}"/>
+        </joint>
+    </xacro:macro>
+
+    <!-- Define macro for wheel -->
+    <xacro:macro name="wheel" params="position radius thickness mass">
+        <link name="${position}_wheel">
+            <!-- Collision -->
+            <collision>
+                <origin xyz="0 0 ${thickness/2}"/>
+                <geometry>
+                    <cylinder radius="${radius}" length="${thickness}"/>
+                </geometry>
+                <material name="blue"/>
+            </collision>
+
+            <!-- Visual -->
+            <visual>
+                <origin xyz="0 0 ${thickness/2}"/>
+                <geometry>
+                    <cylinder radius="${radius}" length="${thickness}"/>
+                </geometry>
+            </visual>
+
+            <!-- Inertial -->
+            <xacro:inertial_cylinder mass="${mass}" length="${thickness}" radius="${radius}">
+                <origin xyz="0 0 ${thickness/2}"/>
+            </xacro:inertial_cylinder>
+        </link>
+
+        <!-- Gazebo settings -->
+        <gazebo reference="${position}_wheel">
+            <material>Gazebo/Blue</material>
+        </gazebo>
+    </xacro:macro>
+</robot>

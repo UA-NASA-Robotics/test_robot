@@ -1,0 +1,144 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <xacro:include filename='inertial_macros.xacro'/>
+    <xacro:include filename='physical_macros.xacro'/>
+
+    <xacro:property name="chassis_length" value="0.4953"/>
+    <xacro:property name="chassis_width" value="0.4064"/>
+    <xacro:property name="chassis_height" value="0.0635"/>
+    <xacro:property name="chassis_mass" value="1.0"/>
+    <xacro:property name="wheel_radius" value="0.130"/>
+    <xacro:property name="wheel_thickness" value="0.085"/>
+    <xacro:property name="wheel_mass" value="0.05"/>
+    <xacro:property name="hub_length" value="0.4445"/>
+    <xacro:property name="hub_radius" value="0.0254"/>
+
+    <!--ROS2 x and y conventions-->
+    <xacro:property name="bot_center_to_wheel_center_x" value="0.19685"/>
+    <xacro:property name="bot_center_to_wheel_center_y" value="0.22225"/>
+
+    <material name="white">
+        <color rgba="1 1 1 1"/>
+    </material>
+
+    <material name="orange">
+        <color rgba="1 0.3 0.1 1"/>
+    </material>
+
+    <material name="blue">
+        <color rgba="0.2 0.2 1 1"/>
+    </material>
+
+    <material name="black">
+        <color rgba="0 0 0 1"/>
+    </material>
+
+    <!-- BASE LINK -->
+    <link name="base_link">
+
+    </link>
+
+    <!-- CHASSIS -->
+    <!-- Bottom plate .125" not included in robot model-->
+    <joint name="chassis_joint" type="fixed">
+        <parent link="base_link"/>
+        <child link="chassis"/>
+        <origin xyz="${-chassis_length/2} 0 ${-chassis_height/2}"/>
+    </joint>
+
+    <link name="chassis">
+        <visual>
+            <origin xyz="${chassis_length/2} 0 ${chassis_height/2}"/>
+            <geometry>
+                <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+            </geometry>
+            <material name="white"/>
+        </visual>
+        <collision>
+            <origin xyz="${chassis_length/2} 0 ${chassis_height/2}"/>
+            <geometry>
+                <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+            </geometry>
+        </collision>
+        <xacro:inertial_box mass="${chassis_mass}" x="${chassis_length}" y="${chassis_width}" z="${chassis_height}">
+            <origin xyz="${chassis_length/2} 0 ${chassis_height/2}" rpy="0 0 0"/>
+        </xacro:inertial_box>
+    </link>
+
+    <gazebo reference="chassis">
+        <material>Gazebo/White</material>
+    </gazebo>
+
+
+    <!-- HUBS -->
+
+    <!-- FRONT HUB-->
+    <joint name="front_hub_joint" type="fixed">
+        <parent link="base_link"/>
+        <child link="front_hub"/>
+        <origin xyz="${bot_center_to_wheel_center_x} 0 0" rpy="${pi/2} 0 0"/>
+    </joint>
+
+    <link name="front_hub">
+        <visual>
+            <origin xyz="0 0 0"/>
+            <geometry>
+                <cylinder radius="${hub_radius}" length="${hub_length}"/>
+            </geometry>
+            <material name="white"/>
+        </visual>
+    </link>
+
+    <gazebo reference="front_hub_joint">
+        <material>Gazebo/White</material>
+    </gazebo>
+
+    <!-- BACK HUB-->
+    <joint name="back_hub_joint" type="fixed">
+        <parent link="base_link"/>
+        <child link="back_hub"/>
+        <origin xyz="${-bot_center_to_wheel_center_x} 0 0" rpy="${pi/2} 0 0"/>
+    </joint>
+
+    <link name="back_hub">
+        <visual>
+            <origin xyz="0 0 0"/>
+            <geometry>
+                <cylinder radius="${hub_radius}" length="${hub_length}"/>
+            </geometry>
+            <material name="white"/>
+        </visual>
+    </link>
+
+    <gazebo reference="back_hub_joint">
+        <material>Gazebo/White</material>
+    </gazebo>
+
+
+    <!-- WHEELS -->
+
+    <!-- FRONT LEFT WHEEL LINK -->
+    <xacro:wheel_joint position="front_left" bot_center_to_wheel_center_x="${bot_center_to_wheel_center_x}" bot_center_to_wheel_center_y="${bot_center_to_wheel_center_y}"/>
+
+    <!-- FRONT LEFT WHEEL JOINT -->
+    <xacro:wheel position="front_left" radius="${wheel_radius}" thickness="${wheel_thickness}" mass="${wheel_mass}"/>
+
+    <!-- BACK LEFT WHEEL LINK -->
+    <xacro:wheel_joint position="back_left" bot_center_to_wheel_center_x="${bot_center_to_wheel_center_x}" bot_center_to_wheel_center_y="${bot_center_to_wheel_center_y}"/>
+
+    <!-- BACK LEFT WHEEL JOINT -->
+    <xacro:wheel position="back_left" radius="${wheel_radius}" thickness="${wheel_thickness}" mass="${wheel_mass}"/>
+
+    <!-- FRONT RIGHT WHEEL LINK -->
+    <xacro:wheel_joint position="front_right" bot_center_to_wheel_center_x="${bot_center_to_wheel_center_x}" bot_center_to_wheel_center_y="${bot_center_to_wheel_center_y}"/>
+
+    <!-- FRONT RIGHT WHEEL JOINT -->
+    <xacro:wheel position="front_right" radius="${wheel_radius}" thickness="${wheel_thickness}" mass="${wheel_mass}"/>
+
+    <!-- BACK RIGHT WHEEL LINK -->
+    <xacro:wheel_joint position="back_right" bot_center_to_wheel_center_x="${bot_center_to_wheel_center_x}" bot_center_to_wheel_center_y="${bot_center_to_wheel_center_y}"/>
+
+    <!-- BACK RIGHT WHEEL JOINT -->
+    <xacro:wheel position="back_right" radius="${wheel_radius}" thickness="${wheel_thickness}" mass="${wheel_mass}"/>
+</robot>
