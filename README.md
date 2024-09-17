@@ -36,7 +36,7 @@ The following is a short description of each folder & file you'll find at the to
 
 <hr> 
 
-* `LICENSE.md` - contains a free Apache license, but this repository is considered private.
+* `LICENSE.md` - contains a free Apache license.
 * `package.xml` - defines the package metadata for ROS.
 * `packages.txt` - **lists the names of packages that need to be installed via** `apt` (Ubuntu/Other OS).
 * `README.md` - this file you're reading!
