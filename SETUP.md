@@ -8,7 +8,7 @@ Once you get your operating system going, use Visial Studio Code as your IDE. It
 
 Install git by running the command: `sudo apt install git`
 
-The `test_bot` repo should be cloned in the following manor: `git clone /home/{YOURNAME}/dev_ws/src/test_bot`
+The `test_robot` repo should be cloned in the following manor: `git clone /home/{YOURNAME}/dev_ws/src/test_robot`
 
 Download the version of ROS2 that is supposed to be ran on your OS, for Noble its Jazzy Jalisco, and follow the instructions such as here; `https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debians.html` Unless this changes, I recommend doing only the core packages and exclude the optional develeopment tools.
 
@@ -18,6 +18,6 @@ The initial development of this code followed a youtube sereis and it is stronlg
 
 `https://youtu.be/OWeLUSzxMsw?si=x1YmtWfIOKYUqMIp`
 
-For anything you `sudo apt install` you should place the name of the package within the `packages.txt` file. Make sure you put only the name of the packages with no spaces and that anything you download works with the version of ros in use. This will be the baseline of how we ensure everyone has the right packages to develope. To `sudo apt install` the entire list, navigate into the `test_bot` folder in a terminal and run: 
+For anything you `sudo apt install` you should place the name of the package within the `packages.txt` file. Make sure you put only the name of the packages with no spaces and that anything you download works with the version of ros in use. This will be the baseline of how we ensure everyone has the right packages to develope. To `sudo apt install` the entire list, navigate into the `test_robot` folder in a terminal and run: 
 
 `sudo apt install $(cat packages.txt)`
