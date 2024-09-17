@@ -290,21 +290,21 @@ void doSpecialInstruction(){
   switch (instruction[0]){
   //'d'...
   case 100:
-    Serial.print("Special Instruction 100 ('d'): Disable Motors");
+    Serial.println("Special Instruction 100 ('d'): Disable Motors");
     for(int i = 0; i < NUMBER_OF_MOTORS; i++){
       digitalWrite(right_enable[i], LOW);
     }
     break;
   //'e'
   case 101: 
-    Serial.print("Special Instruction 101 ('e'): Enable Motors");
+    Serial.println("Special Instruction 101 ('e'): Enable Motors");
     for(int i = 0; i < NUMBER_OF_MOTORS; i++){
       digitalWrite(right_enable[i], HIGH);
     }     
     break;
   //'f'
   case 102:
-    Serial.print("Special Instruction 102 ('f'): Set All Motors to Max ('Forwards')");
+    Serial.println("Special Instruction 102 ('f'): Set All Motors to Max ('Forwards')");
     for(int i = 255; i > 0; i >> 1){  //while any motor spins backwards, to avoid destroying a motor, decelerate all motors to zero.
       for(int j = 0; j < NUMBER_OF_MOTORS; j++){
         analogWrite(left_pwm[j], analogRead(left_pwm[j])/2);
@@ -320,7 +320,7 @@ void doSpecialInstruction(){
     break;
   //'r'
   case 114:
-    Serial.print("Special Instruction 114 ('r'): Set All Motors to Max ('Reverse')");
+    Serial.println("Special Instruction 114 ('r'): Set All Motors to Max ('Reverse')");
     for(int i = 255; i > 0; i >> 1){  //while any motor spins backwards, to avoid destroying a motor, decelerate all motors to zero.
       for(int j = 0; j < NUMBER_OF_MOTORS; j++){
         analogWrite(right_pwm[j], analogRead(right_pwm[j])/2);
@@ -351,11 +351,11 @@ void doSpecialInstruction(){
   //End switch..case
   Serial.print("Special Instruction ");
   Serial.print(instruction[0]);
-  Serial.print(" was recieved and interpereted");
+  Serial.println(" was recieved and interpereted");
   }
 }
 
-//Motor 0 Instruction Lookup Table
+//Individual Motor Instruction Lookup Table
 void doIndividualMotorInstruction(int motorID){
   int instructionID = 2 * instruction[motorID];
   switch (instructionID){
@@ -377,6 +377,6 @@ void doIndividualMotorInstruction(int motorID){
     break;
   Serial.print("M0 instruction ");
   Serial.print(instruction[0]);
-  Serial.print(" was recieved and interpereted"); 
+  Serial.println(" was recieved and interpereted"); 
   }
 }
