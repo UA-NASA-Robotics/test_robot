@@ -125,7 +125,7 @@ void setup() {
 
 //Program Loop  ----------------------------------------------------------------------------------------------------------------------------------------------------------
 void loop() {
-  while(Serial.available() >= 9){   //If a full new instruction is ready
+  while(Serial.available() >= 10){   //If a full new instruction is ready
 
     validateAndParseNextInstruction();             //parse the instruction into instruction[0..7]
     
@@ -259,7 +259,7 @@ void doEncoder4() { //every time a change happens on encoder pin A doEncoder wil
 void validateAndParseNextInstruction(){
   current_byte = Serial.read();    //Get first byte
   if(current_byte != 'I'){         //Only continue on valid initialization
-    Serial.println("Not a valid instruction header");
+    Serial.println("Invalid instruction header");
     valid_instruction = false;
     return;
   }
@@ -268,7 +268,7 @@ void validateAndParseNextInstruction(){
   Serial.println("Valid instruction header, filling out instruction array:");
   
   //get the rest of the instruction
-  for(int i = 0; i <= 8; i++){
+  for(int i = 0; i <= 7; i++){
     current_byte = Serial.read();
     instruction[i] = current_byte;
     
@@ -283,6 +283,7 @@ void validateAndParseNextInstruction(){
   
   if(current_byte != 'E'){       //If it is the wrong byte
     valid_instruction = false;
+    Serial.println("Invalid instruction Conclusion");
     return;
   }
   valid_instruction = true;
