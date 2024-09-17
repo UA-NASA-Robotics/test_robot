@@ -18,14 +18,14 @@
 #define INSTRUCTION_SIZE 8  //Number of bytes to store
 
 //Motor Controller Enables
-#define M0_LEFT_ENABLE   X    //Choice Pin
-#define M1_LEFT_ENABLE   X    //Choice Pin
-#define M2_LEFT_ENABLE   X    //Choice Pin
-#define M3_LEFT_ENABLE   X    //Choice Pin
-#define M0_RIGHT_ENABLE  X    //Choice Pin
-#define M1_RIGHT_ENABLE  X    //Choice Pin
-#define M2_RIGHT_ENABLE  X    //Choice Pin
-#define M3_RIGHT_ENABLE  X    //Choice Pin
+#define M0_LEFT_ENABLE   22    //Choice Pin
+#define M1_LEFT_ENABLE   23    //Choice Pin
+#define M2_LEFT_ENABLE   24    //Choice Pin
+#define M3_LEFT_ENABLE   25    //Choice Pin
+#define M0_RIGHT_ENABLE  26    //Choice Pin
+#define M1_RIGHT_ENABLE  27    //Choice Pin
+#define M2_RIGHT_ENABLE  28    //Choice Pin
+#define M3_RIGHT_ENABLE  29    //Choice Pin
 
 //Motor 0 Constants
 #define M0_LPWM A0          //aka D54
@@ -98,7 +98,7 @@ void setup() {
     pinMode(left_enable[i], OUTPUT);  //permanently HIGH
     pinMode(right_enable[i], OUTPUT); //motor enable toggles
     pinMode(left_pwm[i], OUTPUT);     //
-    pinMode(right_pwm[i]], OUTPUT);   //
+    pinMode(right_pwm[i], OUTPUT);   //
     pinMode(encoder_a[i], INPUT);     //
     pinMode(encoder_b[i], INPUT);     //
     digitalWrite(encoder_a[i], HIGH); //pullup resistors
@@ -129,12 +129,10 @@ void loop() {
         doSpecialInstruction();       //If so, use the "special instrcution" Look-Up-Table (LUT)
       }
       else{                           //otherwise
-        doM0Instruction();            //Go through and do each motor's instruction (ASCII characters up to but excluding 97)
-        doM1Instruction();            //This can probably be condensed in some form by using the same LUT for each motor
-        doM2Instruction();            //and looping through an array where each index corresponds to a different "motor ID" 1..4
-        doM3Instruction();            //I did it this way to break things up for testing purposes as I haven't thought of which way is faster/more efficient.
-      }
-      
+        for(int i = 0; i < NUMBER_OF_MOTORS; i++){
+          doIndividualMotorInstruction(i);
+        }
+      }   
       Serial.println("Awaiting next instruction");
     }
   }
@@ -293,49 +291,49 @@ void doSpecialInstruction(){
   //'d'...
   case 100:
     Serial.print("Special Instruction 100 ('d'): Disable Motors");
-    digitalWrite(RIGHT_ENABLE, LOW);
+    for(int i = 0; i < NUMBER_OF_MOTORS; i++){
+      digitalWrite(right_enable[i], LOW);
+    }
     break;
   //'e'
   case 101: 
     Serial.print("Special Instruction 101 ('e'): Enable Motors");
-    digitalWrite(RIGHT_ENABLE, HIGH);      
+    for(int i = 0; i < NUMBER_OF_MOTORS; i++){
+      digitalWrite(right_enable[i], HIGH);
+    }     
     break;
   //'f'
   case 102:
-    Serial.print("Special Instruction 98 ('b'): Set All Motors to Max ('Forwards')");
+    Serial.print("Special Instruction 102 ('f'): Set All Motors to Max ('Forwards')");
     for(int i = 255; i > 0; i >> 1){  //while any motor spins backwards, to avoid destroying a motor, decelerate all motors to zero.
-      analogWrite(M0_LPWM, analogRead(M0_LPWM));  //by dividing by 2
-      analogWrite(M1_LPWM, analogRead(M1_LPWM));
-      analogWrite(M2_LPWM, analogRead(M2_LPWM));
-      analogWrite(M3_LPWM, analogRead(M3_LPWM));
+      for(int j = 0; j < NUMBER_OF_MOTORS; j++){
+        analogWrite(left_pwm[j], analogRead(left_pwm[j])/2);
+      }
     }
     for(int i = 1; i <= 255;){  //Then increase motor speed....
-      analogWrite(M0_RPWM, i);
-      analogWrite(M1_RPWM, i);
-      analogWrite(M2_RPWM, i);
-      analogWrite(M3_RPWM, i);  
-      i << 1;                   //by doubling the speed every iteration
-      i++;                      //and adding one to make shift work
-      }                         //chose to shift instead of i *= 2 to get to exactly 255 without making a special case
-      break;
+      for(int j = 0; j < NUMBER_OF_MOTORS; j++){
+        analogWrite(right_pwm[j], i);
+      } 
+      i << 1;                 //by doubling then...
+      i++;                    //and adding one to make shift work
+    }                         //chose to shift instead of i *= 2 to get to exactly 255 without making a special case
+    break;
   //'r'
   case 114:
     Serial.print("Special Instruction 114 ('r'): Set All Motors to Max ('Reverse')");
-     for(int i = 255; i > 0; i >> 1){  //while any motor spins backwards, to avoid destroying a motor, decelerate all motors to zero.
-      analogWrite(M0_RPWM, analogRead(M0_RPWM));  //by dividing by 2
-      analogWrite(M1_RPWM, analogRead(M1_RPWM));
-      analogWrite(M2_RPWM, analogRead(M2_RPWM));
-      analogWrite(M3_RPWM, analogRead(M3_RPWM));
+    for(int i = 255; i > 0; i >> 1){  //while any motor spins backwards, to avoid destroying a motor, decelerate all motors to zero.
+      for(int j = 0; j < NUMBER_OF_MOTORS; j++){
+        analogWrite(right_pwm[j], analogRead(right_pwm[j])/2);
+      }
     }
     for(int i = 1; i <= 255;){  //Then increase motor speed....
-      analogWrite(M0_LPWM, i);
-      analogWrite(M1_LPWM, i);
-      analogWrite(M2_LPWM, i);
-      analogWrite(M3_LPWM, i);  
-      i << 1;                   //by doubling the speed every iteration
-      i++;                      //and adding one to make shift work
-      }                         //chose to shift instead of i *= 2 to get to exactly 255 without making a special case
-      break;
+      for(int j = 0; j < NUMBER_OF_MOTORS; j++){
+        analogWrite(left_pwm[j], i);
+      } 
+      i << 1;                 //by doubling then...
+      i++;                    //and adding one to make shift work
+    }                         //chose to shift instead of i *= 2 to get to exactly 255 without making a special case
+    break;
   //'t'...
   case 116:
     Serial.println("Special Instruction 116 ('t'): Test Command");
@@ -346,7 +344,9 @@ void doSpecialInstruction(){
   //  break;
   default:  
     //if a command was sent, but no valid option was found, diable motors
-    digitalWrite(RIGHT_ENABLE, LOW);
+    for(int i = 0; i < NUMBER_OF_MOTORS; i++){
+      digitalWrite(right_enable[i], LOW);
+    }
     break;
   //End switch..case
   Serial.print("Special Instruction ");
@@ -356,8 +356,9 @@ void doSpecialInstruction(){
 }
 
 //Motor 0 Instruction Lookup Table
-void doM0Instruction(){
-  switch (instruction[0]){
+void doIndividualMotorInstruction(int motorID){
+  int instructionID = 2 * instruction[motorID];
+  switch (instructionID){
   /*case a:
     //Code for M0 instruction with ID 'a'
     break;
@@ -368,81 +369,14 @@ void doM0Instruction(){
     //Code for M0 instruction with ID 'c'
     break; */
   default:
-    digitalWrite(RIGHT_ENABLE, LOW);
+    for(int i = 0; i < NUMBER_OF_MOTORS; i++){
+      digitalWrite(right_enable[i], LOW);
+    }
     Serial.print("No M0 instruction found by the instruction ID: ");
     Serial.println(instruction[0]);
     break;
   Serial.print("M0 instruction ");
   Serial.print(instruction[0]);
-  Serial.print(" was recieved and interpereted"); 
-  }
-}
-
-//Motor 1 Instruction Lookup Table
-void doM1Instruction(){
-  switch (instruction[2]){
-  /*case a:
-    //Code for M1 instruction with ID 'a'
-    break;
-  case b:
-    //Code for M1 instruction with ID 'b'
-    break;
-  case c:
-    //Code for M1 instruction with ID 'c'
-    break; */
-  default:
-    digitalWrite(RIGHT_ENABLE, LOW);
-    Serial.print("No M1 instruction found by the instruction ID: ");
-    Serial.println(instruction[2]);
-    break;
-  Serial.print("M1 instruction ");
-  Serial.print(instruction[2]);
-  Serial.print(" was recieved and interpereted"); 
-  }
-}
-
-//Motor 2 Instruction Lookup Table
-void doM2Instruction(){
-  switch (instruction[4]){
-  /*case a:
-    //Code for M2 instruction with ID 'a'
-    break;
-  case b:
-    //Code for M2 instruction with ID 'b'
-    break;
-  case c:
-    //Code for M2 instruction with ID 'c'
-    break; */
-  default:
-    digitalWrite(RIGHT_ENABLE, LOW);
-    Serial.print("No M2 instruction found by the instruction ID: ");
-    Serial.println(instruction[4]);
-    break;
-  Serial.print("M2 instruction ");
-  Serial.print(instruction[4]);
-  Serial.print(" was recieved and interpereted"); 
-  }
-}
-
-//Motor 3 Instruction Lookup Table
-void doM3Instruction(){
-  switch (instruction[6]){
-  /*case a:
-    //Code for M3 instruction with ID 'a'
-    break;
-  case b:
-    //Code for M3 instruction with ID 'b'
-    break;
-  case c:
-    //Code for M3 instruction with ID 'c'
-    break; */
-  default:
-    digitalWrite(RIGHT_ENABLE, LOW);
-    Serial.print("No M3 instruction found by the instruction ID: ");
-    Serial.println(instruction[6]);
-    break;
-  Serial.print("M3 instruction ");
-  Serial.print(instruction[6]);
   Serial.print(" was recieved and interpereted"); 
   }
 }
