@@ -346,7 +346,7 @@ void doSpecialInstruction(){
       }                         //chose to shift instead of i *= 2 to get to exactly 255 without making a special case
       break;
   //'t'...
-  case ASCII ID 116:
+  case 116:
     Serial.print("Special Instruction 116 ('t'): Test Command");
     break;
   //'etc'...
