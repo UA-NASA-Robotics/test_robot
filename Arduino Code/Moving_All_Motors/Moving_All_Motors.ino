@@ -141,12 +141,7 @@ void loop() {
         doM4Instruction();            //I did it this way to break things up for testing purposes as I haven't thought of which way is faster/more efficient.
       }
       
-      Serial.println("Debug Text");
-      
-      while(Serial.available() >= 0){
-        Serial.println(Serial.read());
-      }
-
+      Serial.println("Awaiting next instruction");
     }
   }
 }
@@ -283,9 +278,10 @@ void validateAndParseNextInstruction(){
   
   if(current_byte != 'E'){       //If it is the wrong byte
     valid_instruction = false;
-    Serial.println("Invalid instruction Conclusion");
+    Serial.println("Invalid instruction conclusion");
     return;
   }
+  Serial.println("Valid cnstruction concludion");
   valid_instruction = true;
 }
 
@@ -302,7 +298,7 @@ void doSpecialInstruction(){
   switch (instruction[0]){
   //'d'...
   case 100:
-    Serial.print("Special Instruction 99 ('c'): Disable Motors");
+    Serial.print("Special Instruction 100 ('d'): Disable Motors");
     digitalWrite(RIGHT_ENABLE, LOW);
     break;
   //'e'
@@ -348,7 +344,7 @@ void doSpecialInstruction(){
       break;
   //'t'...
   case 116:
-    Serial.print("Special Instruction 116 ('t'): Test Command");
+    Serial.println("Special Instruction 116 ('t'): Test Command");
     break;
   //'etc'...
   //case ASCII ID [97..127]:
