@@ -7,13 +7,14 @@
 //// 3) it should be 10 bytes (ASCII characters) long
 //// 4) it should start with 'I' and end with 'E'
 //// 5) after 'I' it alternates with Command for Motor 1, Value for Motor 1, Command Motor 2, etc.
+//// 6) If you send the command It0000000E it the console should spit out "Special Instruction 116 ('t'): Test Command"
+//// 7) If you see another character be read of a decimal value 10 or 0x0a it is a newline character from entering the command.
+//// 8) Should you see a newline character be read, make sure to change the line ending parameter to No Line Ending in the upper-right corner of the Arduino Serial Monitor
 //////////////////////////////////////////
-
-
 
 //Initializations and Constants -----------------------------------------------------------------------------
 //Motor Controller Enables
-#define LEFT_ENABLE   22    //Choice
+#define LEFT_ENABLE   22    //Choice 
 #define RIGHT_ENABLE  23    //Choice
 
 //Motor 1 Constants
@@ -48,9 +49,9 @@ volatile bool M3_ccw = false;
 volatile int  M4_encoder_position = 0;
 volatile bool M4_ccw = false;
 
-bool validInstruction = false;  //Set in parseInstruction() and in loop() to prevent bad instructions from being executed.
-char currentByte;               //Used in parseInstruction
-char instruction[8];            //Contains the recieved instruction
+bool valid_instruction = false;  //Set in validateAndParseNextInstruction() and in loop() to prevent bad instructions from being executed.
+char current_byte;               //Used in validateAndParseNextInstruction()
+char instruction[8];             //Contains the recieved instruction
 /* From my understanding, the arduino will recieve a series of bytes (an instruction)
  * of 10 bytes long it should parse and control the motors with. This is my method of 
  * doing that. I'm not great with Serial communication so if this is "bad"
@@ -120,6 +121,34 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(M2_ENCODER_A), doEncoder2, CHANGE); // encoder track A on interrupt 1 - pin 3
   attachInterrupt(digitalPinToInterrupt(M3_ENCODER_A), doEncoder3, CHANGE); // encoder track A on interrupt 1 - pin 3
   attachInterrupt(digitalPinToInterrupt(M4_ENCODER_A), doEncoder4, CHANGE); // encoder track A on interrupt 1 - pin 3
+}
+
+//Program Loop  ----------------------------------------------------------------------------------------------------------------------------------------------------------
+void loop() {
+  while(Serial.available() >= 9){   //If a full new instruction is ready
+
+    validateAndParseNextInstruction();             //parse the instruction into instruction[0..7]
+    
+    if(valid_instruction){
+      
+      if(instruction[0] >= 97){       //Check to see if the first command is a "special command" (notated with a lowercase ASCII letter, a = 97, b = 98, ...)
+        doSpecialInstruction();       //If so, use the "special instrcution" Look-Up-Table (LUT)
+      }
+      else{                           //otherwise
+        doM1Instruction();            //Go through and do each motor's instruction (ASCII characters up to but excluding 97)
+        doM2Instruction();            //This can probably be condensed in some form by using the same LUT for each motor
+        doM3Instruction();            //and looping through an array where each index corresponds to a different "motor ID" 1..4
+        doM4Instruction();            //I did it this way to break things up for testing purposes as I haven't thought of which way is faster/more efficient.
+      }
+      
+      Serial.println("Debug Text");
+      
+      while(Serial.available() >= 0){
+        Serial.println(Serial.read());
+      }
+
+    }
+  }
 }
 
 //Functions  ----------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -226,11 +255,12 @@ void doEncoder4() { //every time a change happens on encoder pin A doEncoder wil
     M4_encoder_position++; //if encoder is spinning CW add a count to encoder position
   }
 }
-void parseInstruction(){
-  currentByte = Serial.read();    //Get first byte
-  if(currentByte != 'I'){         //Only continue on valid initialization
+
+void validateAndParseNextInstruction(){
+  current_byte = Serial.read();    //Get first byte
+  if(current_byte != 'I'){         //Only continue on valid initialization
     Serial.println("Not a valid instruction header");
-    validInstruction = false;
+    valid_instruction = false;
     return;
   }
   
@@ -239,51 +269,23 @@ void parseInstruction(){
   
   //get the rest of the instruction
   for(int i = 0; i <= 8; i++){
-    currentByte = Serial.read();
-    instruction[i] = currentByte;
+    current_byte = Serial.read();
+    instruction[i] = current_byte;
     
     //Temp Debug Text
     Serial.print("Index ");
     Serial.print(i);
     Serial.print(" = ");
-    Serial.println(currentByte);
+    Serial.println(current_byte);
   }
   
-  currentByte = Serial.read();  //Get "Conclusion byte"
+  current_byte = Serial.read();  //Get "Conclusion byte"
   
-  if(currentByte != 'E'){       //If it is the wrong byte
-    validInstruction = false;
+  if(current_byte != 'E'){       //If it is the wrong byte
+    valid_instruction = false;
     return;
   }
-  validInstruction = true;
-}
-
-//Program Loop  ----------------------------------------------------------------------------------------------------------------------------------------------------------
-void loop() {
-  while(Serial.available() >= 9){   //If a full new instruction is ready
-
-    parseInstruction();             //parse the instruction into instruction[0..7]
-    
-    if(validInstruction){
-      
-      if(instruction[0] >= 97){       //Check to see if the first command is a "special command" (notated with a lowercase ASCII letter, a = 97, b = 98, ...)
-        doSpecialInstruction();       //If so, use the "special instrcution" Look-Up-Table (LUT)
-      }
-      else{                           //otherwise
-        doM1Instruction();            //Go through and do each motor's instruction (ASCII characters up to but excluding 97)
-        doM2Instruction();            //This can probably be condensed in some form by using the same LUT for each motor
-        doM3Instruction();            //and looping through an array where each index corresponds to a different "motor ID" 1..4
-        doM4Instruction();            //I did it this way to break things up for testing purposes as I haven't thought of which way is faster/more efficient.
-      }
-      
-      Serial.println("Debug Text");
-      
-      while(Serial.available() >= 0){
-        Serial.println(Serial.read());
-      }
-
-    }
-  }
+  valid_instruction = true;
 }
 
 //TODO:
@@ -297,84 +299,65 @@ void loop() {
 //Special Instruction Lookup Table
 void doSpecialInstruction(){
   switch (instruction[0]){
-
-    //'d'...
-    case 100:
-      Serial.print("Special Instruction 99 ('c'): Disable Motors");
-      digitalWrite(RIGHT_ENABLE, LOW);
+  //'d'...
+  case 100:
+    Serial.print("Special Instruction 99 ('c'): Disable Motors");
+    digitalWrite(RIGHT_ENABLE, LOW);
+    break;
+  //'e'
+  case 101: 
+    Serial.print("Special Instruction 101 ('e'): Enable Motors");
+    digitalWrite(RIGHT_ENABLE, HIGH);      
+    break;
+  //'f'
+  case 102:
+    Serial.print("Special Instruction 98 ('b'): Set All Motors to Max ('Forwards')");
+    for(int i = 255; i > 0; i >> 1){  //while any motor spins backwards, to avoid destroying a motor, decelerate all motors to zero.
+      analogWrite(M1_LPWM, analogRead(M1_LPWM));  //by dividing by 2
+      analogWrite(M2_LPWM, analogRead(M2_LPWM));
+      analogWrite(M3_LPWM, analogRead(M3_LPWM));
+      analogWrite(M4_LPWM, analogRead(M4_LPWM));
+    }
+    for(int i = 1; i <= 255;){  //Then increase motor speed....
+      analogWrite(M1_RPWM, i);
+      analogWrite(M2_RPWM, i);
+      analogWrite(M3_RPWM, i);
+      analogWrite(M4_RPWM, i);  
+      i << 1;                   //by doubling the speed every iteration
+      i++;                      //and adding one to make shift work
+      }                         //chose to shift instead of i *= 2 to get to exactly 255 without making a special case
       break;
-
-    //'e'
-    case 101: 
-      Serial.print("Special Instruction 101 ('e'): Enable Motors");
-      digitalWrite(RIGHT_ENABLE, HIGH);      
+  //'r'
+  case 114:
+    Serial.print("Special Instruction 114 ('r'): Set All Motors to Max ('Reverse')");
+     for(int i = 255; i > 0; i >> 1){  //while any motor spins backwards, to avoid destroying a motor, decelerate all motors to zero.
+      analogWrite(M1_RPWM, analogRead(M1_RPWM));  //by dividing by 2
+      analogWrite(M2_RPWM, analogRead(M2_RPWM));
+      analogWrite(M3_RPWM, analogRead(M3_RPWM));
+      analogWrite(M4_RPWM, analogRead(M4_RPWM));
+    }
+    for(int i = 1; i <= 255;){  //Then increase motor speed....
+      analogWrite(M1_LPWM, i);
+      analogWrite(M2_LPWM, i);
+      analogWrite(M3_LPWM, i);
+      analogWrite(M4_LPWM, i);  
+      i << 1;                   //by doubling the speed every iteration
+      i++;                      //and adding one to make shift work
+      }                         //chose to shift instead of i *= 2 to get to exactly 255 without making a special case
       break;
-
-    //'f'
-    case 102:
-      Serial.print("Special Instruction 98 ('b'): Set All Motors to Max ('Forwards')");
-
-      for(int i = 255; i > 0; i >> 1){  //while any motor spins backwards, to avoid destroying a motor, decelerate all motors to zero.
-        analogWrite(M1_LPWM, M1_LPWM/2);  //by dividing by 2
-        analogWrite(M2_LPWM, M2_LPWM/2);
-        analogWrite(M3_LPWM, M3_LPWM/2);
-        analogWrite(M4_LPWM, M4_LPWM/2);
-      }
-      for(int i = 1; i <= 255;){  //Then increase motor speed....
-        analogWrite(M1_RPWM, i);
-        analogWrite(M2_RPWM, i);
-        analogWrite(M3_RPWM, i);
-        analogWrite(M4_RPWM, i);  
-        i << 1;                   //by doubling the speed every iteration
-        i++;                      //and adding one to make shift work
-                                  //chose to shift instead of i *= 2 to get to exactly 255 without making a special case
-      }
-      break;
-
-    //'r'
-    case 114:
-      Serial.print("Special Instruction 114 ('r'): Set All Motors to Max ('Reverse')");
-
-      for(int i = 255; i > 0; i >> 1){  //while any motor spins backwards, to avoid destroying a motor, decelerate all motors to zero.
-        analogWrite(M1_RPWM, M1_RPWM/2);  //by dividing by 2
-        analogWrite(M2_RPWM, M2_RPWM/2);
-        analogWrite(M3_RPWM, M3_RPWM/2);
-        analogWrite(M4_RPWM, M4_RPWM/2);
-      }
-      for(int i = 1; i <= 255;){  //Then increase motor speed....
-        analogWrite(M1_LPWM, i);
-        analogWrite(M2_LPWM, i);
-        analogWrite(M3_LPWM, i);
-        analogWrite(M4_LPWM, i);  
-        i << 1;                   //by doubling the speed every iteration
-        i++;                      //and adding one to make shift work
-                                  //chose to shift instead of i *= 2 to get to exactly 255 without making a special case
-      }
-      break;
-
-    //'s'
-    case 115: 
-      Serial.print("Special Instruction 115 ('s'): Emergency Stop All motors ('Stop')");
-      analogWrite(M1_LPWM, 0);
-      analogWrite(M1_RPWM, 0);
-      analogWrite(M2_LPWM, 0);
-      analogWrite(M2_RPWM, 0);
-      analogWrite(M3_LPWM, 0);
-      analogWrite(M3_RPWM, 0);
-      analogWrite(M4_LPWM, 0);
-      analogWrite(M4_RPWM, 0);
-      break;
-    
-    //'etc'...
-    //case ASCII ID [97..127]:
-      Serial.print("Special Instruction [97..127] ('ASCII char'): Command Name");
-      break;
-
+  //'t'...
+  case ASCII ID 116:
+    Serial.print("Special Instruction 116 ('t'): Test Command");
+    break;
+  //'etc'...
+  //case ASCII ID [97..127]:
+  //  Serial.print("Special Instruction [97..127] ('ASCII char'): Command Name");
+  //  break;
   default:  
     //if a command was sent, but no valid option was found, diable motors
     digitalWrite(RIGHT_ENABLE, LOW);
     break;
-
+  //End switch..case
   Serial.print("Special Instruction ");
   Serial.print(instruction[0]);
   Serial.print(" was recieved and interpereted");
