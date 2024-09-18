@@ -119,7 +119,7 @@ void setup() {
 
 //Program Loop  ----------------------------------------------------------------------------------------------------------------------------------------------------------
 void loop() {
-  while(Serial.available() >= 10){   //If a full new instruction is ready
+  while(Serial.available() >= INSTRUCTION_SIZE + 2){   //If a full new instruction is ready
 
     validateAndParseNextInstruction();             //parse the instruction into instruction[0..7]
     
@@ -255,7 +255,7 @@ void validateAndParseNextInstruction(){
   Serial.println("Valid instruction header, filling out instruction array:");
   
   //get the rest of the instruction
-  for(int i = 0; i <= 7; i++){
+  for(int i = 0; i <= INSTRUCTION_SIZE; i++){
     current_byte = Serial.read();
     instruction[i] = current_byte;
     
@@ -305,12 +305,10 @@ void doSpecialInstruction(){
   //'f'
   case 102:
     Serial.println("Special Instruction 102 ('f'): Set All Motors to Max ('Forwards')");
-    for(int i = 255; i > 0; i >> 1){  //while any motor spins backwards, to avoid destroying a motor, decelerate all motors to zero.
-      for(int j = 0; j < NUMBER_OF_MOTORS; j++){
-        analogWrite(left_pwm[j], analogRead(left_pwm[j])/2);
-      }
+    for(int i = i; i < NUMBER_OF_MOTORS; i++){    //turn off left_pwm
+      analogWrite(left_pwm[i], 0);
     }
-    for(int i = 1; i <= 255;){  //Then increase motor speed....
+    for(int i = 1; i <= 255;){                    //Then increase motor speed....
       for(int j = 0; j < NUMBER_OF_MOTORS; j++){
         analogWrite(right_pwm[j], i);
       } 
@@ -321,12 +319,10 @@ void doSpecialInstruction(){
   //'r'
   case 114:
     Serial.println("Special Instruction 114 ('r'): Set All Motors to Max ('Reverse')");
-    for(int i = 255; i > 0; i >> 1){  //while any motor spins backwards, to avoid destroying a motor, decelerate all motors to zero.
-      for(int j = 0; j < NUMBER_OF_MOTORS; j++){
-        analogWrite(right_pwm[j], analogRead(right_pwm[j])/2);
-      }
+    for(int i = 255; i > 0; i++){                 //turn off right_pwm 
+      analogWrite(right_pwm[i], 0);
     }
-    for(int i = 1; i <= 255;){  //Then increase motor speed....
+    for(int i = 1; i <= 255;){                    //Then increase motor speed....
       for(int j = 0; j < NUMBER_OF_MOTORS; j++){
         analogWrite(left_pwm[j], i);
       } 
