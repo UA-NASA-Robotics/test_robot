@@ -20,13 +20,13 @@
 #define INSTRUCTION_SIZE 2 * NUMBER_OF_MOTORS    //Number of bytes to store
 
 //Joystick 0
-#define JS0_X A8              //Analog Pin aka D52
-#define JS0_Y A9              //Analog Pin aka D53
+#define JS0_X A8              //Analog Pin aka D62
+#define JS0_Y A9              //Analog Pin aka D63
 #define JS0_Z 2               //Interruptable Digital Pin
 
 //Joystick 1
-#define JS1_X A10              //Analog Pin aka D54
-#define JS1_Y A11              //Analog Pin aka D55
+#define JS1_X A10              //Analog Pin aka D64
+#define JS1_Y A11              //Analog Pin aka D65
 #define JS1_Z 3                //Interruptable Digital Pin
 
 volatile bool joystick_control = false; //Used to switch between Serial Mode and Joystick Mode Operation
@@ -146,6 +146,15 @@ void setup() {
 
 //Program Loop  ----------------------------------------------------------------------------------------------------------------------------------------------------------
 void loop() {
+
+  Serial.print("Encoder 1: ");
+  Serial.print(encoder_position[0]);
+  Serial.print("; Encoder 2: ");
+  Serial.print(encoder_position[1]);
+  Serial.print("; Encoder 3: ");
+  Serial.print(encoder_position[2]);
+  Serial.print("; Encoder 4: ");
+  Serial.println(encoder_position[3]);
 
   //Serial Control
   while(Serial.available() >= INSTRUCTION_SIZE + 2 && joystick_control == false){   //If a full new instruction is ready
