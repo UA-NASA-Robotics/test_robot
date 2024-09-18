@@ -14,8 +14,24 @@
 
 //Initializations and Constants -----------------------------------------------------------------------------
 //Constants
-#define NUMBER_OF_MOTORS 4  //Total number of motors
-#define INSTRUCTION_SIZE 8  //Number of bytes to store
+#define NUMBER_OF_MOTORS 4    //Total number of motors
+#define NUMBER_OF_JOYSTICKS 2 //Total number of joysticks
+#define DEADZONE_WIDTH 25     //Joystick deadzone width
+#define INSTRUCTION_SIZE 2 * NUMBER_OF_MOTORS    //Number of bytes to store
+
+//Joystick 0
+#define JS0_X A8              //Analog Pin aka D52
+#define JS0_Y A9              //Analog Pin aka D53
+#define JS0_Z 52              //Digital Pin
+bool js0_last_z_state = LOW;  //Needed to allow code to run on a joystick toggle rather than hold
+
+//Joystick 1
+#define JS1_X A10              //Analog Pin aka D54
+#define JS1_Y A11              //Analog Pin aka D55
+#define JS1_Z 53               //Digital Pin
+bool js1_last_z_state = LOW;   //Needed to allow code to run on a joystick toggle rather than hold
+
+bool joystick_control = false; //Used to switch between Serial Mode and Joystick Mode Operation
 
 //Motor Controller Enables
 #define M0_LEFT_ENABLE   22    //Choice Pin
@@ -59,18 +75,23 @@ volatile bool M2_ccw = false;
 volatile int  M3_encoder_position = 0;
 volatile bool M3_ccw = false;
 
-int left_enable[4] = {M0_LEFT_ENABLE, M1_LEFT_ENABLE, M2_LEFT_ENABLE, M3_LEFT_ENABLE};
-int right_enable[4] = {M0_RIGHT_ENABLE, M1_RIGHT_ENABLE, M2_RIGHT_ENABLE, M3_RIGHT_ENABLE};
-int left_pwm[4] = {M0_LPWM, M1_LPWM, M2_LPWM, M3_LPWM};
-int right_pwm[4] = {M0_RPWM, M1_RPWM, M2_RPWM, M3_RPWM};
-int encoder_a[4] = {M0_ENCODER_A, M1_ENCODER_A, M2_ENCODER_A, M3_ENCODER_A};
-int encoder_b[4] = {M0_ENCODER_B, M1_ENCODER_B, M2_ENCODER_B, M3_ENCODER_B};
-volatile int encoder_position[4] = {M0_encoder_position, M1_encoder_position, M2_encoder_position, M3_encoder_position};
-volatile bool ccw[4] = {M0_ccw, M1_ccw, M2_ccw, M3_ccw};
+int joystick_x[NUMBER_OF_JOYSTICKS] = {JS0_X, JS1_X};
+int joystick_y[NUMBER_OF_JOYSTICKS] = {JS0_Y, JS1_Y};
+int joystick_z[NUMBER_OF_JOYSTICKS] = {JS0_Z, JS1_Z};
+int joystick_previous_state[NUMBER_OF_JOYSTICKS] = {js0_last_z_state, js1_last_z_state};
+
+int left_enable[NUMBER_OF_MOTORS] = {M0_LEFT_ENABLE, M1_LEFT_ENABLE, M2_LEFT_ENABLE, M3_LEFT_ENABLE};
+int right_enable[NUMBER_OF_MOTORS] = {M0_RIGHT_ENABLE, M1_RIGHT_ENABLE, M2_RIGHT_ENABLE, M3_RIGHT_ENABLE};
+int left_pwm[NUMBER_OF_MOTORS] = {M0_LPWM, M1_LPWM, M2_LPWM, M3_LPWM};
+int right_pwm[NUMBER_OF_MOTORS] = {M0_RPWM, M1_RPWM, M2_RPWM, M3_RPWM};
+int encoder_a[NUMBER_OF_MOTORS] = {M0_ENCODER_A, M1_ENCODER_A, M2_ENCODER_A, M3_ENCODER_A};
+int encoder_b[NUMBER_OF_MOTORS] = {M0_ENCODER_B, M1_ENCODER_B, M2_ENCODER_B, M3_ENCODER_B};
+volatile int encoder_position[NUMBER_OF_MOTORS] = {M0_encoder_position, M1_encoder_position, M2_encoder_position, M3_encoder_position};
+volatile bool ccw[NUMBER_OF_MOTORS] = {M0_ccw, M1_ccw, M2_ccw, M3_ccw};
 
 bool valid_instruction = false;  //Set in validateAndParseNextInstruction() and in loop() to prevent bad instructions from being executed.
 char current_byte;               //Used in validateAndParseNextInstruction()
-char instruction[8];             //Contains the recieved instruction
+char instruction[INSTRUCTION_SIZE];             //Contains the recieved instruction
 /* From my understanding, the arduino will recieve a series of bytes (an instruction)
  * of 10 bytes long it should parse and control the motors with. This is my method of 
  * doing that. I'm not great with Serial communication so if this is "bad"
@@ -98,12 +119,19 @@ void setup() {
     pinMode(left_enable[i], OUTPUT);  //permanently HIGH
     pinMode(right_enable[i], OUTPUT); //motor enable toggles
     pinMode(left_pwm[i], OUTPUT);     //
-    pinMode(right_pwm[i], OUTPUT);   //
+    pinMode(right_pwm[i], OUTPUT);    //
     pinMode(encoder_a[i], INPUT);     //
     pinMode(encoder_b[i], INPUT);     //
     digitalWrite(encoder_a[i], HIGH); //pullup resistors
     digitalWrite(encoder_b[i], HIGH); //pullup resistors
-    
+  }
+
+  //Joystick Arrays setup
+  for(int i = 0; i < NUMBER_OF_JOYSTICKS; i++){
+    pinMode(joystick_x[i], INPUT);
+    pinMode(joystick_y[i], INPUT);
+    pinMode(joystick_z[i], INPUT);
+    digitalWrite(joystick_z[i], HIGH);  //pullup resistor
   }
 
   /*Need 4 Interrupt functions because the middle term calls a special type of function which cannot have parameters
@@ -119,7 +147,14 @@ void setup() {
 
 //Program Loop  ----------------------------------------------------------------------------------------------------------------------------------------------------------
 void loop() {
-  while(Serial.available() >= INSTRUCTION_SIZE + 2){   //If a full new instruction is ready
+
+  //Joystick Updates
+  updateOperationMode();
+  joystick_previous_state[0] = digitalRead(joystick_z[0]);
+  joystick_previous_state[1] = digitalRead(joystick_z[1]);
+
+  //Serial Control
+  while(Serial.available() >= INSTRUCTION_SIZE + 2 && joystick_control == false){   //If a full new instruction is ready
 
     validateAndParseNextInstruction();             //parse the instruction into instruction[0..7]
     
@@ -135,6 +170,22 @@ void loop() {
       }   
       Serial.println("Awaiting next instruction");
     }
+  }
+
+  //Joystick Control
+  if(joystick_control == true){      
+    
+    getJoystickInstruction();       //translate joystick inputs into a valid instruction form
+    
+    if(instruction[0] >= 97){       //Check to see if the first command is a "special command" (notated with a lowercase ASCII letter, a = 97, b = 98, ...)
+      doSpecialInstruction();       //If so, use the "special instrcution" Look-Up-Table (LUT)
+    }
+    else{                           //otherwise
+      for(int i = 0; i < NUMBER_OF_MOTORS; i++){
+        doIndividualMotorInstruction(i);
+      }
+    }   
+    Serial.println("Awaiting next instruction");
   }
 }
 
@@ -171,6 +222,46 @@ void validateAndParseNextInstruction(){
   }
   Serial.println("Valid instruction concludion");
   valid_instruction = true;
+}
+
+void updateOperationMode(){ //Switch between Joystick Operation Mode and Serial Monitor Operation Mode on both joysticks pressed down.
+  if(digitalRead(joystick_z[0]) == HIGH && digitalRead(joystick_z[1]) == HIGH){ //If both joysticks have been pressed
+    if(joystick_previous_state[0] == LOW || joystick_previous_state[1] == LOW){ //and either joystick was low before (to prevent rapid switching)
+      if(joystick_control == false){  //if in Serial mode
+        joystick_control == true;     //swap to joystick mode
+      }
+      else{                           //otherwise we are in joystick mode
+        joystick_control == false;    //and we should swap to Serial mode
+      }
+      for(int i = 0; i < NUMBER_OF_MOTORS; i++){  //Regardless of which mode we are switching to,
+        analogWrite(left_pwm[i], 0);              //Set pwms to zero
+        analogWrite(right_pwm[i], 0);             //Set pwms to zero
+        digitalWrite(right_enable[i], LOW);       //Re-enable any disabled motors
+      }
+    }
+  }
+}
+
+bool getJoystickInstruction(){  //Translate joystick input into instruction
+  
+  for(int i = 0; i < NUMBER_OF_JOYSTICKS; i++){
+    if(analogRead(joystick_y[i]) > 512 + DEADZONE_WIDTH){             //If "above" deadzone, go forwards
+        instruction[i] = 1;                                           //Set M0/M2 command to "forwards"
+        instruction[i + 1] = (analogRead(joystick_y[i]) - 512) >> 1;  //Set M0/M2 value between 0 and 255
+        instruction[i + 2] = 1;                                       //Set M1/M3 command to "forwards"
+        instruction[i + 3] = (analogRead(joystick_y[i]) - 512) >> 1;  //Set M1/M3 value between 0 and 255
+      }
+      else if(analogRead(joystick_y[i]) < 512 - DEADZONE_WIDTH){      //if "below" deadzone
+        instruction[i] = 2;                                           //Set M0/M2 command to "forwards"
+        instruction[i + 1] = -(analogRead(joystick_y[i]) - 512) >> 1; //Set M0/M2 value between 0 and 255
+        instruction[i + 2] = 2;                                       //Set M1/M3 command to "forwards"
+        instruction[i + 3] = (analogRead(joystick_y[i]) - 512) >> 1;  //Set M1/M3 value between 0 and 255
+      }
+      else{                     //if "inside" of deadzone
+        instruction[i + 1] = 0; //Set M0/M2 value to 0
+        instruction[i + 3] = 0; //Set M1/M3 value to 0
+      }
+  }
 }
 
 //INSTRUCTION FUNCTIONS -------------------------------------------------------------------------------------------------------------------------------------------------
