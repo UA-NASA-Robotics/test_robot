@@ -32,20 +32,20 @@
 volatile bool joystick_control = false; //Used to switch between Serial Mode and Joystick Mode Operation
 
 //Motor Controller Enables
-#define M0_LEFT_ENABLE   22    //Choice Pin
-#define M1_LEFT_ENABLE   23    //Choice Pin
-#define M2_LEFT_ENABLE   24    //Choice Pin
-#define M3_LEFT_ENABLE   25    //Choice Pin
-#define M0_RIGHT_ENABLE  26    //Choice Pin
-#define M1_RIGHT_ENABLE  27    //Choice Pin
-#define M2_RIGHT_ENABLE  28    //Choice Pin
-#define M3_RIGHT_ENABLE  29    //Choice Pin
+#define M0_LEFT_ENABLE   26    //Choice Pin
+#define M1_LEFT_ENABLE   27    //Choice Pin
+#define M2_LEFT_ENABLE   28    //Choice Pin
+#define M3_LEFT_ENABLE   29    //Choice Pin
+#define M0_RIGHT_ENABLE  30    //Choice Pin
+#define M1_RIGHT_ENABLE  31    //Choice Pin
+#define M2_RIGHT_ENABLE  32    //Choice Pin
+#define M3_RIGHT_ENABLE  33    //Choice Pin
 
 //Motor 0 Constants
 #define M0_LPWM A0          //aka D54
 #define M0_RPWM A1          //aka D55
 #define M0_ENCODER_A 18     //Interruptable (2, 3, 18, 19, 20, 21)
-#define M0_ENCODER_B 17     //Choice Pin
+#define M0_ENCODER_B 22     //Choice Pin
 volatile int  M0_encoder_position = 0;
 volatile bool M0_ccw = false;
 
@@ -53,7 +53,7 @@ volatile bool M0_ccw = false;
 #define M1_LPWM A2          //aka D56
 #define M1_RPWM A3          //aka D57
 #define M1_ENCODER_A 19     //Interruptable (2, 3, 18, 19, 20, 21)
-#define M1_ENCODER_B 16     //Choice Pin
+#define M1_ENCODER_B 23     //Choice Pin
 volatile int  M1_encoder_position = 0;
 volatile bool M1_ccw = false;
 
@@ -61,7 +61,7 @@ volatile bool M1_ccw = false;
 #define M2_LPWM A4          //aka D58
 #define M2_RPWM A5          //aka D59
 #define M2_ENCODER_A 20     //Interruptable (2, 3, 18, 19, 20, 21)
-#define M2_ENCODER_B 15     //Choice Pin
+#define M2_ENCODER_B 24     //Choice Pin
 volatile int  M2_encoder_position = 0;
 volatile bool M2_ccw = false;
 
@@ -69,7 +69,7 @@ volatile bool M2_ccw = false;
 #define M3_LPWM A6          //aka D60
 #define M3_RPWM A7          //aka D61
 #define M3_ENCODER_A 21     //Interruptable (2, 3, 18, 19, 20, 21)
-#define M3_ENCODER_B 14     //Choice Pin
+#define M3_ENCODER_B 25     //Choice Pin
 volatile int  M3_encoder_position = 0;
 volatile bool M3_ccw = false;
 
@@ -78,9 +78,9 @@ int joystick_y[NUMBER_OF_JOYSTICKS] = {JS0_Y, JS1_Y};
 int joystick_z[NUMBER_OF_JOYSTICKS] = {JS0_Z, JS1_Z};
 
 int left_enable[NUMBER_OF_MOTORS] = {M0_LEFT_ENABLE, M1_LEFT_ENABLE, M2_LEFT_ENABLE, M3_LEFT_ENABLE};
-volatile int right_enable[NUMBER_OF_MOTORS] = {M0_RIGHT_ENABLE, M1_RIGHT_ENABLE, M2_RIGHT_ENABLE, M3_RIGHT_ENABLE};
-volatile int left_pwm[NUMBER_OF_MOTORS] = {M0_LPWM, M1_LPWM, M2_LPWM, M3_LPWM};
-volatile int right_pwm[NUMBER_OF_MOTORS] = {M0_RPWM, M1_RPWM, M2_RPWM, M3_RPWM};
+int right_enable[NUMBER_OF_MOTORS] = {M0_RIGHT_ENABLE, M1_RIGHT_ENABLE, M2_RIGHT_ENABLE, M3_RIGHT_ENABLE};
+int left_pwm[NUMBER_OF_MOTORS] = {M0_LPWM, M1_LPWM, M2_LPWM, M3_LPWM};
+int right_pwm[NUMBER_OF_MOTORS] = {M0_RPWM, M1_RPWM, M2_RPWM, M3_RPWM};
 int encoder_a[NUMBER_OF_MOTORS] = {M0_ENCODER_A, M1_ENCODER_A, M2_ENCODER_A, M3_ENCODER_A};
 int encoder_b[NUMBER_OF_MOTORS] = {M0_ENCODER_B, M1_ENCODER_B, M2_ENCODER_B, M3_ENCODER_B};
 volatile int encoder_position[NUMBER_OF_MOTORS] = {M0_encoder_position, M1_encoder_position, M2_encoder_position, M3_encoder_position};
