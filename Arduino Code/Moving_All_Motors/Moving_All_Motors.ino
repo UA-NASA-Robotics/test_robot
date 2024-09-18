@@ -22,16 +22,14 @@
 //Joystick 0
 #define JS0_X A8              //Analog Pin aka D52
 #define JS0_Y A9              //Analog Pin aka D53
-#define JS0_Z 52              //Digital Pin
-bool js0_last_z_state = LOW;  //Needed to allow code to run on a joystick toggle rather than hold
+#define JS0_Z 2               //Interruptable Digital Pin
 
 //Joystick 1
 #define JS1_X A10              //Analog Pin aka D54
 #define JS1_Y A11              //Analog Pin aka D55
-#define JS1_Z 53               //Digital Pin
-bool js1_last_z_state = LOW;   //Needed to allow code to run on a joystick toggle rather than hold
+#define JS1_Z 3                //Interruptable Digital Pin
 
-bool joystick_control = false; //Used to switch between Serial Mode and Joystick Mode Operation
+volatile bool joystick_control = false; //Used to switch between Serial Mode and Joystick Mode Operation
 
 //Motor Controller Enables
 #define M0_LEFT_ENABLE   22    //Choice Pin
@@ -78,20 +76,19 @@ volatile bool M3_ccw = false;
 int joystick_x[NUMBER_OF_JOYSTICKS] = {JS0_X, JS1_X};
 int joystick_y[NUMBER_OF_JOYSTICKS] = {JS0_Y, JS1_Y};
 int joystick_z[NUMBER_OF_JOYSTICKS] = {JS0_Z, JS1_Z};
-int joystick_previous_state[NUMBER_OF_JOYSTICKS] = {js0_last_z_state, js1_last_z_state};
 
 int left_enable[NUMBER_OF_MOTORS] = {M0_LEFT_ENABLE, M1_LEFT_ENABLE, M2_LEFT_ENABLE, M3_LEFT_ENABLE};
-int right_enable[NUMBER_OF_MOTORS] = {M0_RIGHT_ENABLE, M1_RIGHT_ENABLE, M2_RIGHT_ENABLE, M3_RIGHT_ENABLE};
-int left_pwm[NUMBER_OF_MOTORS] = {M0_LPWM, M1_LPWM, M2_LPWM, M3_LPWM};
-int right_pwm[NUMBER_OF_MOTORS] = {M0_RPWM, M1_RPWM, M2_RPWM, M3_RPWM};
+volatile int right_enable[NUMBER_OF_MOTORS] = {M0_RIGHT_ENABLE, M1_RIGHT_ENABLE, M2_RIGHT_ENABLE, M3_RIGHT_ENABLE};
+volatile int left_pwm[NUMBER_OF_MOTORS] = {M0_LPWM, M1_LPWM, M2_LPWM, M3_LPWM};
+volatile int right_pwm[NUMBER_OF_MOTORS] = {M0_RPWM, M1_RPWM, M2_RPWM, M3_RPWM};
 int encoder_a[NUMBER_OF_MOTORS] = {M0_ENCODER_A, M1_ENCODER_A, M2_ENCODER_A, M3_ENCODER_A};
 int encoder_b[NUMBER_OF_MOTORS] = {M0_ENCODER_B, M1_ENCODER_B, M2_ENCODER_B, M3_ENCODER_B};
 volatile int encoder_position[NUMBER_OF_MOTORS] = {M0_encoder_position, M1_encoder_position, M2_encoder_position, M3_encoder_position};
 volatile bool ccw[NUMBER_OF_MOTORS] = {M0_ccw, M1_ccw, M2_ccw, M3_ccw};
 
-bool valid_instruction = false;  //Set in validateAndParseNextInstruction() and in loop() to prevent bad instructions from being executed.
-char current_byte;               //Used in validateAndParseNextInstruction()
-char instruction[INSTRUCTION_SIZE];             //Contains the recieved instruction
+bool valid_instruction = false;     //Set in validateAndParseNextInstruction() and in loop() to prevent bad instructions from being executed.
+char current_byte;                  //Used in validateAndParseNextInstruction()
+char instruction[INSTRUCTION_SIZE]; //Contains the recieved instruction
 /* From my understanding, the arduino will recieve a series of bytes (an instruction)
  * of 10 bytes long it should parse and control the motors with. This is my method of 
  * doing that. I'm not great with Serial communication so if this is "bad"
@@ -134,24 +131,21 @@ void setup() {
     digitalWrite(joystick_z[i], HIGH);  //pullup resistor
   }
 
-  /*Need 4 Interrupt functions because the middle term calls a special type of function which cannot have parameters
+  /*Need 4 Encoder Interrupt functions because the middle term calls a special type of function which cannot have parameters
    *This means we cannot pass in a parameter to specify which motor has ticked if we want to cound each seperately
    *If using tank controls where we only need to keep track of each pair of wheels (left front/back and right front/back)
    *we'd only need 2 because we'd only be keeping track of M0 and M1.
   */
-  attachInterrupt(digitalPinToInterrupt(M0_ENCODER_A), doEncoder1, CHANGE); // encoder track A on interrupt 1 - pin 3
-  attachInterrupt(digitalPinToInterrupt(M1_ENCODER_A), doEncoder2, CHANGE); // encoder track A on interrupt 1 - pin 3
-  attachInterrupt(digitalPinToInterrupt(M2_ENCODER_A), doEncoder3, CHANGE); // encoder track A on interrupt 1 - pin 3
-  attachInterrupt(digitalPinToInterrupt(M3_ENCODER_A), doEncoder4, CHANGE); // encoder track A on interrupt 1 - pin 3
+  attachInterrupt(digitalPinToInterrupt(M0_ENCODER_A), doEncoder1, CHANGE); //encoder track A on interrupt 1 - pin 3
+  attachInterrupt(digitalPinToInterrupt(M1_ENCODER_A), doEncoder2, CHANGE); //encoder track A on interrupt 1 - pin 3
+  attachInterrupt(digitalPinToInterrupt(M2_ENCODER_A), doEncoder3, CHANGE); //encoder track A on interrupt 1 - pin 3
+  attachInterrupt(digitalPinToInterrupt(M3_ENCODER_A), doEncoder4, CHANGE); //encoder track A on interrupt 1 - pin 3
+  attachInterrupt(digitalPinToInterrupt(JS0_Z), joystickToggle, RISING); //Used to detect joystick_button press and toggle motor enable/disable and operation mode
+  attachInterrupt(digitalPinToInterrupt(JS1_Z), joystickToggle, RISING); //Used to detect joystick_button press and toggle motor enable/disable and operation mode
 }
 
 //Program Loop  ----------------------------------------------------------------------------------------------------------------------------------------------------------
 void loop() {
-
-  //Joystick Updates
-  updateOperationMode();
-  joystick_previous_state[0] = digitalRead(joystick_z[0]);
-  joystick_previous_state[1] = digitalRead(joystick_z[1]);
 
   //Serial Control
   while(Serial.available() >= INSTRUCTION_SIZE + 2 && joystick_control == false){   //If a full new instruction is ready
@@ -185,7 +179,7 @@ void loop() {
         doIndividualMotorInstruction(i);
       }
     }   
-    Serial.println("Awaiting next instruction");
+    Serial.println("-----");
   }
 }
 
@@ -222,24 +216,6 @@ void validateAndParseNextInstruction(){
   }
   Serial.println("Valid instruction concludion");
   valid_instruction = true;
-}
-
-void updateOperationMode(){ //Switch between Joystick Operation Mode and Serial Monitor Operation Mode on both joysticks pressed down.
-  if(digitalRead(joystick_z[0]) == HIGH && digitalRead(joystick_z[1]) == HIGH){ //If both joysticks have been pressed
-    if(joystick_previous_state[0] == LOW || joystick_previous_state[1] == LOW){ //and either joystick was low before (to prevent rapid switching)
-      if(joystick_control == false){  //if in Serial mode
-        joystick_control == true;     //swap to joystick mode
-      }
-      else{                           //otherwise we are in joystick mode
-        joystick_control == false;    //and we should swap to Serial mode
-      }
-      for(int i = 0; i < NUMBER_OF_MOTORS; i++){  //Regardless of which mode we are switching to,
-        analogWrite(left_pwm[i], 0);              //Set pwms to zero
-        analogWrite(right_pwm[i], 0);             //Set pwms to zero
-        digitalWrite(right_enable[i], LOW);       //Re-enable any disabled motors
-      }
-    }
-  }
 }
 
 bool getJoystickInstruction(){  //Translate joystick input into instruction
@@ -423,6 +399,42 @@ void doSpecialInstruction(){
 }
 
 //ENCODER FUNCTIONS -----------------------------------------------------------------------------------------------------------------------------------------------
+void joystickToggle(){ //Switch between Joystick Operation Mode and Serial Monitor Operation Mode on both joysticks pressed down.
+  if(digitalRead(joystick_z[0]) == HIGH && digitalRead(joystick_z[1]) == HIGH){ //If both joysticks have been pressed
+    if(joystick_control == false){  //if in Serial mode
+      joystick_control == true;     //swap to joystick mode
+    }
+    else{                           //otherwise we are in joystick mode
+      joystick_control == false;    //and we should swap to Serial mode
+    }
+    for(volatile int i = 0; i < NUMBER_OF_MOTORS; i++){  //Regardless of which mode we are switching to,
+      analogWrite(left_pwm[i], 0);              //Set pwms to zero
+      analogWrite(right_pwm[i], 0);             //Set pwms to zero
+      digitalWrite(right_enable[i], LOW);       //Re-enable any disabled motors
+    }
+  }
+  else if(digitalRead(joystick_z[0]) == HIGH){
+    if(digitalRead(right_enable[0]) == LOW){
+      digitalWrite(right_enable[0], HIGH);
+      digitalWrite(right_enable[1], HIGH);
+    }
+    else{
+      digitalWrite(right_enable[0], LOW);
+      digitalWrite(right_enable[1], LOW);
+    }
+  }
+  else if(digitalRead(joystick_z[1]) == HIGH){
+    if(digitalRead(right_enable[2]) == LOW){
+      digitalWrite(right_enable[2], HIGH);
+      digitalWrite(right_enable[3], HIGH);
+    }
+    else{
+      digitalWrite(right_enable[2], LOW);
+      digitalWrite(right_enable[3], LOW);
+    }
+  }
+}
+
 void doEncoder1() { //every time a change happens on encoder pin A doEncoder will run.
   if (digitalRead(M0_ENCODER_A) == HIGH) { // found a low-to-high on channel A
     if (digitalRead(M0_ENCODER_B) == LOW) { // check channel B to see which way encoder is spinning
