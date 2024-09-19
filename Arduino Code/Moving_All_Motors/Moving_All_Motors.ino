@@ -12,99 +12,118 @@
 //// 8) Should you see a newline character be read, make sure to change the line ending parameter to No Line Ending in the upper-right corner of the Arduino Serial Monitor
 //////////////////////////////////////////
 
+/* NUMERICALLY ORGANIZED PIN LIST
+ *Key: ~ = PWM; ^ = interrupt  <> = communication (avoid using if possible); A = Analog INPUT
+ *A9  - JS1_Y;  analog joystick input
+ *A10 - JS0_Y;  analog joystick input
+ *A13 - JS1_X;  analog joystick input
+ *A14 - JS0_X;  analog joystick input
+ *~^2 - JS0_Z;  interruptable digital output for joystick push-button
+ *~4  - M3_RPWM;  pwmable digital output
+ *~5  - M2_RPWM;  pwmable digital output
+ *~6  - M1_RPWM;  pwmable digital output
+ *~7  - M0_RPWM;  pwmable digital output
+ *~8  - JS1_Z;  interruptable digital output for joystick push-button 
+ *~10 - M3_RPWM;  pwmable digital output
+ *~11 - M2_RPWM;  pwmable digital output
+ *~12 - M1_RPWM;  pwmable digital output
+ *~13 - M0_RPWM;  pwmable digital output
+ *^18 - M0_ENCODER_A; interruptable digital input
+ *^19 - M1_ENCODER_A; interruptable digital input
+ *^20 - M2_ENCODER_A; interruptable digital input
+ *^21 - M3_ENCODER_A; interruptable digital input
+ *22  - M0_ENCODER_B; digital input
+ *23  - M1_ENCODER_B; digital input
+ *24  - M2_ENCODER_B; digital input
+ *25  - M3_ENCODER_B; digital input
+ *34  - M0_LEFT_ENABLE; digital output
+ *35  - M0_RIGHT_ENABLE; digital output
+ *36  - M1_LEFT_ENABLE; digital output
+ *37  - M1_RIGHT_ENABLE; digital output
+ *38  - M2_LEFT_ENABLE; digital output
+ *39  - M2_RIGHT_ENABLE; digital output
+ *40  - M3_LEFT_ENABLE; digital output
+ *41  - M3_RIGHT_ENABLE; digital output
+ */  
+
 //Initializations and Constants -----------------------------------------------------------------------------
+
 //Constants
-#define NUMBER_OF_MOTORS 4    //Total number of motors
-#define NUMBER_OF_JOYSTICKS 2 //Total number of joysticks
-#define DEADZONE_WIDTH 25     //Joystick deadzone width
-#define INSTRUCTION_SIZE 2 * NUMBER_OF_MOTORS    //Number of bytes to store
+#define NUMBER_OF_MOTORS 4    
+#define NUMBER_OF_JOYSTICKS 2 
+#define DEADZONE_WIDTH 25     
+#define INSTRUCTION_SIZE 2 * NUMBER_OF_MOTORS    
 
 //Joystick 0
-#define JS0_X A8              //Analog Pin aka D62
-#define JS0_Y A9              //Analog Pin aka D63
-#define JS0_Z 2               //Interruptable Digital Pin
+#define JS0_X A14
+#define JS0_Y A10
+#define JS0_Z 2  
 
 //Joystick 1
-#define JS1_X A10              //Analog Pin aka D64
-#define JS1_Y A11              //Analog Pin aka D65
-#define JS1_Z 3                //Interruptable Digital Pin
+#define JS1_X A13
+#define JS1_Y A9 
+#define JS1_Z 8  
 
 volatile bool joystick_control = false; //Used to switch between Serial Mode and Joystick Mode Operation
 
 //Motor Controller Enables
-#define M0_LEFT_ENABLE   26    //Choice Pin
-#define M1_LEFT_ENABLE   27    //Choice Pin
-#define M2_LEFT_ENABLE   28    //Choice Pin
-#define M3_LEFT_ENABLE   29    //Choice Pin
-#define M0_RIGHT_ENABLE  30    //Choice Pin
-#define M1_RIGHT_ENABLE  31    //Choice Pin
-#define M2_RIGHT_ENABLE  32    //Choice Pin
-#define M3_RIGHT_ENABLE  33    //Choice Pin
+#define M0_LEFT_ENABLE   34
+#define M1_LEFT_ENABLE   36
+#define M2_LEFT_ENABLE   38
+#define M3_LEFT_ENABLE   40
+#define M0_RIGHT_ENABLE  35
+#define M1_RIGHT_ENABLE  37
+#define M2_RIGHT_ENABLE  39
+#define M3_RIGHT_ENABLE  41
 
 //Motor 0 Constants
-#define M0_LPWM A0          //aka D54
-#define M0_RPWM A1          //aka D55
-#define M0_ENCODER_A 18     //Interruptable (2, 3, 18, 19, 20, 21)
-#define M0_ENCODER_B 22     //Choice Pin
+#define M0_LPWM 13         
+#define M0_RPWM 7          
+#define M0_ENCODER_A 18    
+#define M0_ENCODER_B 22    
 volatile int  M0_encoder_position = 0;
 volatile bool M0_ccw = false;
 
 //Motor 1 Constants
-#define M1_LPWM A2          //aka D56
-#define M1_RPWM A3          //aka D57
-#define M1_ENCODER_A 19     //Interruptable (2, 3, 18, 19, 20, 21)
-#define M1_ENCODER_B 23     //Choice Pin
+#define M1_LPWM 12       
+#define M1_RPWM 6        
+#define M1_ENCODER_A 19  
+#define M1_ENCODER_B 23  
 volatile int  M1_encoder_position = 0;
 volatile bool M1_ccw = false;
 
 //Motor 2 Constants
-#define M2_LPWM A4          //aka D58
-#define M2_RPWM A5          //aka D59
-#define M2_ENCODER_A 20     //Interruptable (2, 3, 18, 19, 20, 21)
-#define M2_ENCODER_B 24     //Choice Pin
+#define M2_LPWM 11       
+#define M2_RPWM 5        
+#define M2_ENCODER_A 20  
+#define M2_ENCODER_B 24  
 volatile int  M2_encoder_position = 0;
 volatile bool M2_ccw = false;
 
 //Motor 3 Constants
-#define M3_LPWM A6          //aka D60
-#define M3_RPWM A7          //aka D61
-#define M3_ENCODER_A 21     //Interruptable (2, 3, 18, 19, 20, 21)
-#define M3_ENCODER_B 25     //Choice Pin
+#define M3_LPWM 10        
+#define M3_RPWM 4         
+#define M3_ENCODER_A 21   
+#define M3_ENCODER_B 25   
 volatile int  M3_encoder_position = 0;
 volatile bool M3_ccw = false;
 
+//Array Setups
 int joystick_x[NUMBER_OF_JOYSTICKS] = {JS0_X, JS1_X};
 int joystick_y[NUMBER_OF_JOYSTICKS] = {JS0_Y, JS1_Y};
 int joystick_z[NUMBER_OF_JOYSTICKS] = {JS0_Z, JS1_Z};
-
-int left_enable[NUMBER_OF_MOTORS] = {M0_LEFT_ENABLE, M1_LEFT_ENABLE, M2_LEFT_ENABLE, M3_LEFT_ENABLE};
-int right_enable[NUMBER_OF_MOTORS] = {M0_RIGHT_ENABLE, M1_RIGHT_ENABLE, M2_RIGHT_ENABLE, M3_RIGHT_ENABLE};
-int left_pwm[NUMBER_OF_MOTORS] = {M0_LPWM, M1_LPWM, M2_LPWM, M3_LPWM};
-int right_pwm[NUMBER_OF_MOTORS] = {M0_RPWM, M1_RPWM, M2_RPWM, M3_RPWM};
+int hard_enable[NUMBER_OF_MOTORS] = {M0_LEFT_ENABLE, M1_LEFT_ENABLE, M2_LEFT_ENABLE, M3_LEFT_ENABLE};
 int encoder_a[NUMBER_OF_MOTORS] = {M0_ENCODER_A, M1_ENCODER_A, M2_ENCODER_A, M3_ENCODER_A};
 int encoder_b[NUMBER_OF_MOTORS] = {M0_ENCODER_B, M1_ENCODER_B, M2_ENCODER_B, M3_ENCODER_B};
+volatile int right_pwm[NUMBER_OF_MOTORS] = {M0_RPWM, M1_RPWM, M2_RPWM, M3_RPWM};
+volatile int left_pwm[NUMBER_OF_MOTORS] = {M0_LPWM, M1_LPWM, M2_LPWM, M3_LPWM};
+volatile int toggle_enable[NUMBER_OF_MOTORS] = {M0_RIGHT_ENABLE, M1_RIGHT_ENABLE, M2_RIGHT_ENABLE, M3_RIGHT_ENABLE};
 volatile int encoder_position[NUMBER_OF_MOTORS] = {M0_encoder_position, M1_encoder_position, M2_encoder_position, M3_encoder_position};
 volatile bool ccw[NUMBER_OF_MOTORS] = {M0_ccw, M1_ccw, M2_ccw, M3_ccw};
 
 bool valid_instruction = false;     //Set in validateAndParseNextInstruction() and in loop() to prevent bad instructions from being executed.
 char current_byte;                  //Used in validateAndParseNextInstruction()
 char instruction[INSTRUCTION_SIZE]; //Contains the recieved instruction
-/* From my understanding, the arduino will recieve a series of bytes (an instruction)
- * of 10 bytes long it should parse and control the motors with. This is my method of 
- * doing that. I'm not great with Serial communication so if this is "bad"
- * Let me know how I can improve it, because I'm literally just guessing here! XOXO <3
- * Index--Purpose -> Explaination
- * N/A - Initialize -> If this byte does not match the <valid command input> (temporarily 'I') byte ignore everything else
- * 0 - Command 1 --> Commands for Motor 0 or All Motors (Ex. 0 = stop Motor 0; 1 = drive Motor 0 forward; 2 = backwards; 3 = slowdown to stop; ... 255 = stop all motors)
- * 1 - Value 1 ----> Absolute Value for Command 1/Motor 0 (Expects DEC 0 to 255) goes to M0_LPWM or M0_RPWM depending on instruction
- * 2 - Command 2 --> Commands for Motor 1 or All Motors (Ex. 0 = stop Motor 1; 1 = drive Motor 1 forward; 2 = backwards; 3 = slowdown to stop; ... 255 = stop all motors)
- * 3 - Value 2 ----> Absolute Value for Command 2/Motor 1 (Expects DEC 0 to 255) goes to M1_LPWM or M1_RPWM depending on instruction
- * 4 - Command 3 --> Commands for Motor 2 or All Motors (Ex. 0 = stop Motor 2; 1 = drive Motor 2 forward; 2 = backwards; 3 = slowdown to stop; ... 255 = stop all motors)
- * 5 - Value 3 ----> Absolute Value for Command 3/Motor 2 (Expects DEC 0 to 255) goes to M2_LPWM or M2_RPWM depending on instruction
- * 6 - Command 4 --> Commands for Motor 3 or All Motors (Ex. 0 = stop Motor 3; 1 = drive Motor 3 forward; 2 = backwards; 3 = slowdown to stop; ... 255 = stop all motors)
- * 7 - Value 4 ----> Absolute Value for Command 4/Motor 3 (Expects DEC 0 to 255) goes to M3_LPWM or M3_RPWM depending on instruction
- * I don't know if this is the structure
-*/
 
 //Setup -----------------------------------------------------------------------------
 void setup() {
@@ -113,14 +132,14 @@ void setup() {
 
   //Motor Controller and Encoder arrays setup
   for(int i = 0; i < NUMBER_OF_MOTORS; i++){
-    pinMode(left_enable[i], OUTPUT);  //permanently HIGH
-    pinMode(right_enable[i], OUTPUT); //motor enable toggles
-    pinMode(left_pwm[i], OUTPUT);     //
-    pinMode(right_pwm[i], OUTPUT);    //
-    pinMode(encoder_a[i], INPUT);     //
-    pinMode(encoder_b[i], INPUT);     //
-    digitalWrite(encoder_a[i], HIGH); //pullup resistors
-    digitalWrite(encoder_b[i], HIGH); //pullup resistors
+    pinMode(hard_enable[i], OUTPUT);    //permanently HIGH
+    pinMode(toggle_enable[i], OUTPUT);  //motor enable toggles
+    pinMode(left_pwm[i], OUTPUT);       //
+    pinMode(right_pwm[i], OUTPUT);      //
+    pinMode(encoder_a[i], INPUT);       //
+    pinMode(encoder_b[i], INPUT);       //
+    digitalWrite(encoder_a[i], HIGH);   //pullup resistors
+    digitalWrite(encoder_b[i], HIGH);   //pullup resistors
   }
 
   //Joystick Arrays setup
@@ -131,11 +150,7 @@ void setup() {
     digitalWrite(joystick_z[i], HIGH);  //pullup resistor
   }
 
-  /*Need 4 Encoder Interrupt functions because the middle term calls a special type of function which cannot have parameters
-   *This means we cannot pass in a parameter to specify which motor has ticked if we want to cound each seperately
-   *If using tank controls where we only need to keep track of each pair of wheels (left front/back and right front/back)
-   *we'd only need 2 because we'd only be keeping track of M0 and M1.
-  */
+  // May only need 1 encoder interrupt if all 4 are on a shared interrupt (pins 50-53?)
   attachInterrupt(digitalPinToInterrupt(M0_ENCODER_A), doEncoder1, CHANGE); //encoder track A on interrupt 1 - pin 3
   attachInterrupt(digitalPinToInterrupt(M1_ENCODER_A), doEncoder2, CHANGE); //encoder track A on interrupt 1 - pin 3
   attachInterrupt(digitalPinToInterrupt(M2_ENCODER_A), doEncoder3, CHANGE); //encoder track A on interrupt 1 - pin 3
@@ -158,11 +173,8 @@ void loop() {
 
   //Serial Control
   while(Serial.available() >= INSTRUCTION_SIZE + 2 && joystick_control == false){   //If a full new instruction is ready
-
-    validateAndParseNextInstruction();             //parse the instruction into instruction[0..7]
-    
+    validateAndParseNextInstruction();                                              //parse the instruction into instruction[0..7]
     if(valid_instruction){
-      
       if(instruction[0] >= 97){       //Check to see if the first command is a "special command" (notated with a lowercase ASCII letter, a = 97, b = 98, ...)
         doSpecialInstruction();       //If so, use the "special instrcution" Look-Up-Table (LUT)
       }
@@ -177,9 +189,7 @@ void loop() {
 
   //Joystick Control
   if(joystick_control == true){      
-    
     getJoystickInstruction();       //translate joystick inputs into a valid instruction form
-    
     if(instruction[0] >= 97){       //Check to see if the first command is a "special command" (notated with a lowercase ASCII letter, a = 97, b = 98, ...)
       doSpecialInstruction();       //If so, use the "special instrcution" Look-Up-Table (LUT)
     }
@@ -258,7 +268,7 @@ void doIndividualMotorInstruction(int motorID){ //0, 1, 2, 3
   
   //Disable
   case 0:
-    digitalWrite(right_enable[motorID], LOW);
+    digitalWrite(toggle_enable[motorID], LOW);
     Serial.print("M");
     Serial.print(motorID);
     Serial.println(" disabled");
@@ -286,16 +296,16 @@ void doIndividualMotorInstruction(int motorID){ //0, 1, 2, 3
   
   //Enable
   case 3:
-    digitalWrite(right_enable[motorID], HIGH);
+    digitalWrite(toggle_enable[motorID], HIGH);
     Serial.print("M");
     Serial.print(motorID);
     Serial.println(" enabled");
     break;
   
-  //Cases 48 through 51 are for debuging purposes and can be removed once we can send data remotely
+  //Cases 48 through 51 are for debuging purposes and can be removed once we can send data remotely ******************
   //Disable
   case 48:
-    digitalWrite(right_enable[motorID], LOW);
+    digitalWrite(toggle_enable[motorID], LOW);
     Serial.print("M");
     Serial.print(motorID);
     Serial.println(" disabled");
@@ -323,13 +333,13 @@ void doIndividualMotorInstruction(int motorID){ //0, 1, 2, 3
   
   //Enable
   case 51:
-    digitalWrite(right_enable[motorID], HIGH);
+    digitalWrite(toggle_enable[motorID], HIGH);
     Serial.print("M");
     Serial.print(motorID);
     Serial.println(" enabled");
     break;
   default:
-    digitalWrite(right_enable[motorID], LOW);
+    digitalWrite(toggle_enable[motorID], LOW);
     Serial.print("No M");
     Serial.print(motorID);
     Serial.print(" instruction found by the instruction ID: ");
@@ -346,7 +356,7 @@ void doSpecialInstruction(){
   case 100:
     Serial.println("Special Instruction 100 ('d'): Disable Motors");
     for(int i = 0; i < NUMBER_OF_MOTORS; i++){
-      digitalWrite(right_enable[i], LOW);
+      digitalWrite(toggle_enable[i], LOW);
     }
     break;
   
@@ -354,7 +364,7 @@ void doSpecialInstruction(){
   case 101: 
     Serial.println("Special Instruction 101 ('e'): Enable Motors");
     for(int i = 0; i < NUMBER_OF_MOTORS; i++){
-      digitalWrite(right_enable[i], HIGH);
+      digitalWrite(toggle_enable[i], HIGH);
     }     
     break;
   
@@ -401,7 +411,7 @@ void doSpecialInstruction(){
   default:  
     //if a command was sent, but no valid option was found, diable motors
     for(int i = 0; i < NUMBER_OF_MOTORS; i++){
-      digitalWrite(right_enable[i], LOW);
+      digitalWrite(toggle_enable[i], LOW);
     }
     break;
   }
@@ -419,27 +429,27 @@ void joystickToggle(){ //Switch between Joystick Operation Mode and Serial Monit
     for(volatile int i = 0; i < NUMBER_OF_MOTORS; i++){  //Regardless of which mode we are switching to,
       analogWrite(left_pwm[i], 0);              //Set pwms to zero
       analogWrite(right_pwm[i], 0);             //Set pwms to zero
-      digitalWrite(right_enable[i], LOW);       //Re-enable any disabled motors
+      digitalWrite(toggle_enable[i], LOW);       //Re-enable any disabled motors
     }
   }
   else if(digitalRead(joystick_z[0]) == HIGH){
-    if(digitalRead(right_enable[0]) == LOW){
-      digitalWrite(right_enable[0], HIGH);
-      digitalWrite(right_enable[1], HIGH);
+    if(digitalRead(toggle_enable[0]) == LOW){
+      digitalWrite(toggle_enable[0], HIGH);
+      digitalWrite(toggle_enable[1], HIGH);
     }
     else{
-      digitalWrite(right_enable[0], LOW);
-      digitalWrite(right_enable[1], LOW);
+      digitalWrite(toggle_enable[0], LOW);
+      digitalWrite(toggle_enable[1], LOW);
     }
   }
   else if(digitalRead(joystick_z[1]) == HIGH){
-    if(digitalRead(right_enable[2]) == LOW){
-      digitalWrite(right_enable[2], HIGH);
-      digitalWrite(right_enable[3], HIGH);
+    if(digitalRead(toggle_enable[2]) == LOW){
+      digitalWrite(toggle_enable[2], HIGH);
+      digitalWrite(toggle_enable[3], HIGH);
     }
     else{
-      digitalWrite(right_enable[2], LOW);
-      digitalWrite(right_enable[3], LOW);
+      digitalWrite(toggle_enable[2], LOW);
+      digitalWrite(toggle_enable[3], LOW);
     }
   }
 }
